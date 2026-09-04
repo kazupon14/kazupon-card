@@ -14,7 +14,7 @@
 <script>
 const params = new URLSearchParams(window.location.search);
 const id = params.get("id");
-  document.getElementById("cardImage").src = "images/" + id + ".jpg";
+document.getElementById("cardImage").src = id + ".png";
 
 document.getElementById("cardId").textContent =
   id ? "カードID：" + id : "カードIDがありません";
