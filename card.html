@@ -1,36 +1,16 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KAZUPON CARD</title>
-
-  <style>
-    #cardImage {
-      max-width: 300px;
-      width: 100%;
-      animation: sway 2s ease-in-out infinite alternate;
-    }
-
-    @keyframes sway {
-      from {
-        transform: translateX(-20px);
-      }
-
-      to {
-        transform: translateX(20px);
-      }
-    }
-  </style>
 </head>
 
 <body>
 
-  <img id="cardImage">
+  <img id="cardImage" style="max-width:300px; width:100%;">
 
   <h1>KAZUPON CARD</h1>
-
   <h2 id="cardId"></h2>
 
   <script>
@@ -38,7 +18,7 @@
     const id = params.get("id");
 
     if (id) {
-      document.getElementById("cardImage").src = "images/" + id + ".png";
+      document.getElementById("cardImage").src = id + ".png";
       document.getElementById("cardId").textContent = "カードID：" + id;
     } else {
       document.getElementById("cardId").textContent = "カードIDがありません";
