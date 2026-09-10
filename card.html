@@ -4,26 +4,196 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KAZUPON CARD</title>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f5f5f5;
+      color: #222;
+    }
+
+    .card {
+      max-width: 460px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.12);
+    }
+
+    .card img {
+      width: 100%;
+      border-radius: 12px;
+      margin-bottom: 18px;
+      display: block;
+    }
+
+    h1 {
+      font-size: 32px;
+      margin: 0 0 18px;
+      text-align: center;
+    }
+
+    .name {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .kz {
+      font-size: 18px;
+      color: #666;
+      margin-bottom: 18px;
+      text-align: center;
+    }
+
+    .status {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .status div {
+      background: #f1f1f1;
+      padding: 12px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .intro {
+      line-height: 1.7;
+      background: #fff8dc;
+      padding: 14px;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+
+    .error {
+      text-align: center;
+      padding: 40px 10px;
+      font-size: 18px;
+    }
+  </style>
 </head>
 
 <body>
 
-  <img id="cardImage" style="max-width:300px; width:100%;">
+<div class="card" id="card">
+  読み込み中...
+</div>
 
-  <h1>KAZUPON CARD</h1>
-  <h2 id="cardId"></h2>
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const kz = params.get("id");
 
-  <script>
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get("id");
+  fetch("cards.csv")
+    .then(response => response.text())
+    .then(text => {
 
-    if (id) {
-      document.getElementById("cardImage").src = id + ".png";
-      document.getElementById("cardId").textContent = "カードID：" + id;
-    } else {
-      document.getElementById("cardId").textContent = "カードIDがありません";
-    }
-  </script>
+      const rows = text.trim().split(/\r?\n/).map(row => row.split(","));
+      const headers = rows[0].map(h => h.trim());
+
+      const idIndex = headers.findIndex(h =>
+        h.includes("カードID") || h.includes("KZ")
+      );
+
+      const nameIndex = headers.findIndex(h =>
+        h.includes("名前")
+      );
+
+      const attackIndex = headers.findIndex(h =>
+        h.includes("攻撃")
+      );
+
+      const defenseIndex = headers.findIndex(h =>
+        h.includes("防御")
+      );
+
+      const speedIndex = headers.findIndex(h =>
+        h.includes("素早")
+      );
+
+      const hpIndex = headers.findIndex(h =>
+        h.includes("生命") || h.includes("HP")
+      );
+
+      const typeIndex = headers.findIndex(h =>
+        h.includes("属性")
+      );
+
+      const introIndex = headers.findIndex(h =>
+        h.includes("紹介")
+      );
+
+      const target = rows.slice(1).find(row =>
+        row[idIndex] &&
+        row[idIndex].trim() === kz
+      );
+
+      if (!kz || !target) {
+        document.getElementById("card").innerHTML =
+          '<div class="error">カードが見つかりませんでした。</div>';
+        return;
+      }
+
+      document.getElementById("card").innerHTML = `
+        <img src="${kz}.png" alt="${kz}">
+
+        <h1>KAZUPON CARD</h1>
+
+        <div class="name">
+          ${target[nameIndex] || ""}
+        </div>
+
+        <div class="kz">
+          カードID：${kz}
+        </div>
+
+        <div class="status">
+
+          <div>
+            <strong>属性</strong><br>
+            ${target[typeIndex] || "-"}
+          </div>
+
+          <div>
+            <strong>攻撃力</strong><br>
+            ${target[attackIndex] || "-"}
+          </div>
+
+          <div>
+            <strong>防御力</strong><br>
+            ${target[defenseIndex] || "-"}
+          </div>
+
+          <div>
+            <strong>素早さ</strong><br>
+            ${target[speedIndex] || "-"}
+          </div>
+
+          <div>
+            <strong>生命力</strong><br>
+            ${target[hpIndex] || "-"}
+          </div>
+
+        </div>
+
+        <div class="intro">
+          <strong>紹介</strong><br>
+          ${target[introIndex] || "紹介文はまだ登録されていません。"}
+        </div>
+      `;
+    })
+
+    .catch(() => {
+      document.getElementById("card").innerHTML =
+        '<div class="error">データの読み込みに失敗しました。</div>';
+    });
+</script>
 
 </body>
 </html>
