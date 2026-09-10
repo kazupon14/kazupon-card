@@ -3,10 +3,191 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KAZUPON CARD</title>
+  <title>カズポンカード図鑑</title>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f5f5f5;
+      color: #222;
+    }
+
+    .card {
+      max-width: 460px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.12);
+    }
+
+    .card img {
+      width: 100%;
+      border-radius: 12px;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      font-size: 26px;
+      margin: 0 0 8px;
+    }
+
+    .kz {
+      color: #777;
+      margin-bottom: 18px;
+    }
+
+    .status {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .status div {
+      background: #f1f1f1;
+      padding: 10px;
+      border-radius: 10px;
+    }
+
+    .intro {
+      line-height: 1.7;
+      background: #fff8dc;
+      padding: 14px;
+      border-radius: 10px;
+    }
+
+    .error {
+      text-align: center;
+      padding: 40px 10px;
+      font-size: 18px;
+    }
+  </style>
 </head>
+
 <body>
-  <h1>KAZUPON CARD</h1>
-  <p>カードバトル準備中</p>
+
+<div class="card" id="card">
+  読み込み中...
+</div>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+
+  // id= と kz= の両方に対応
+  const kz = params.get("id") || params.get("kz");
+
+  fetch("cards.csv")
+    .then(response => response.text())
+    .then(text => {
+
+      const rows = text.trim().split(/\r?\n/).map(row => {
+        return row.split(",");
+      });
+
+      const headers = rows[0].map(h => h.trim());
+
+      // 各項目の列を自動で探す
+      const idIndex = headers.findIndex(h =>
+        h.includes("カードID") ||
+        h.includes("KZ")
+      );
+
+      const nameIndex = headers.findIndex(h =>
+        h.includes("名前")
+      );
+
+      const attackIndex = headers.findIndex(h =>
+        h.includes("攻撃")
+      );
+
+      const defenseIndex = headers.findIndex(h =>
+        h.includes("防御")
+      );
+
+      const speedIndex = headers.findIndex(h =>
+        h.includes("素早")
+      );
+
+      const hpIndex = headers.findIndex(h =>
+        h.includes("生命") ||
+        h.includes("HP")
+      );
+
+      const typeIndex = headers.findIndex(h =>
+        h.includes("属性")
+      );
+
+      const introIndex = headers.findIndex(h =>
+        h.includes("紹介")
+      );
+
+      // KZ番号が一致するカードを探す
+      const target = rows.slice(1).find(row =>
+        row[idIndex] &&
+        row[idIndex].trim() === kz
+      );
+
+      // 見つからなかった場合
+      if (!kz || !target) {
+        document.getElementById("card").innerHTML =
+          '<div class="error">カードが見つかりませんでした。</div>';
+        return;
+      }
+
+      // カード情報を表示
+      document.getElementById("card").innerHTML = `
+        <img src="${kz}.png" alt="${kz}">
+
+        <h1>${target[nameIndex] || ""}</h1>
+
+        <div class="kz">
+          ${kz}
+        </div>
+
+        <div class="status">
+
+          <div>
+            <strong>属性</strong><br>
+            ${target[typeIndex] || "-"}
+          </div>
+
+          <div>
+            <strong>攻撃力</strong><br>
+            ${target[attackIndex] || "-"}
+          </div>
+
+          <div>
+            <strong>防御力</strong><br>
+            ${target[defenseIndex] || "-"}
+          </div>
+
+          <div>
+            <strong>素早さ</strong><br>
+            ${target[speedIndex] || "-"}
+          </div>
+
+          <div>
+            <strong>生命力</strong><br>
+            ${target[hpIndex] || "-"}
+          </div>
+
+        </div>
+
+        <div class="intro">
+          <strong>紹介</strong><br>
+          ${target[introIndex] || "紹介文はまだ登録されていません。"}
+        </div>
+      `;
+    })
+
+    .catch(error => {
+      document.getElementById("card").innerHTML =
+        '<div class="error">データの読み込みに失敗しました。</div>';
+    });
+</script>
+
 </body>
 </html>
