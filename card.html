@@ -17,7 +17,7 @@
     .card {
       max-width: 460px;
       margin: 0 auto;
-      background: #fff;
+      background: white;
       border-radius: 18px;
       padding: 20px;
       box-shadow: 0 4px 18px rgba(0,0,0,0.12);
@@ -25,57 +25,65 @@
 
     .card img {
       width: 100%;
+      display: block;
       border-radius: 12px;
       margin-bottom: 18px;
-      display: block;
-    }
-
-    h1 {
-      font-size: 32px;
-      margin: 0 0 18px;
-      text-align: center;
     }
 
     .name {
-      font-size: 24px;
+      font-size: 27px;
       font-weight: bold;
-      margin-bottom: 8px;
       text-align: center;
+      margin-bottom: 5px;
     }
 
-    .kz {
-      font-size: 18px;
-      color: #666;
-      margin-bottom: 18px;
+    .id {
       text-align: center;
+      color: #777;
+      margin-bottom: 18px;
     }
 
     .status {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
-      margin-bottom: 18px;
     }
 
-    .status div {
-      background: #f1f1f1;
-      padding: 12px;
+    .status-box {
+      background: #f2f2f2;
       border-radius: 10px;
+      padding: 11px;
       text-align: center;
     }
 
+    .status-box strong {
+      font-size: 13px;
+      color: #666;
+    }
+
+    .status-box span {
+      display: block;
+      margin-top: 4px;
+      font-size: 19px;
+      font-weight: bold;
+    }
+
     .intro {
-      line-height: 1.7;
+      margin-top: 18px;
       background: #fff8dc;
-      padding: 14px;
       border-radius: 10px;
-      margin-top: 10px;
+      padding: 15px;
+      line-height: 1.7;
+    }
+
+    .intro-title {
+      font-weight: bold;
+      margin-bottom: 5px;
     }
 
     .error {
       text-align: center;
       padding: 40px 10px;
-      font-size: 18px;
     }
   </style>
 </head>
@@ -87,51 +95,96 @@
 </div>
 
 <script>
+
   const params = new URLSearchParams(window.location.search);
   const kz = params.get("id");
 
+  // CSVを正しく分解
+  function parseCSV(text) {
+    const rows = [];
+    let row = [];
+    let value = "";
+    let quoted = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      const next = text[i + 1];
+
+      if (c === '"' && quoted && next === '"') {
+        value += '"';
+        i++;
+      }
+      else if (c === '"') {
+        quoted = !quoted;
+      }
+      else if (c === ',' && !quoted) {
+        row.push(value);
+        value = "";
+      }
+      else if ((c === '\n' || c === '\r') && !quoted) {
+
+        if (c === '\r' && next === '\n') {
+          i++;
+        }
+
+        row.push(value);
+
+        if (row.some(cell => cell !== "")) {
+          rows.push(row);
+        }
+
+        row = [];
+        value = "";
+      }
+      else {
+        value += c;
+      }
+    }
+
+    if (value !== "" || row.length > 0) {
+      row.push(value);
+      rows.push(row);
+    }
+
+    return rows;
+  }
+
   fetch("cards.csv")
-    .then(response => response.text())
+    .then(response => {
+
+      if (!response.ok) {
+        throw new Error("CSV読み込みエラー");
+      }
+
+      return response.text();
+    })
+
     .then(text => {
 
-      const rows = text.trim().split(/\r?\n/).map(row => row.split(","));
-      const headers = rows[0].map(h => h.trim());
+      const rows = parseCSV(text);
 
-      const idIndex = headers.findIndex(h =>
-        h.includes("カードID") || h.includes("KZ")
+      const headers = rows[0].map(h =>
+        h.replace(/^\uFEFF/, "").trim()
       );
 
-      const nameIndex = headers.findIndex(h =>
-        h.includes("名前")
-      );
+      const getIndex = name =>
+        headers.findIndex(h => h === name);
 
-      const attackIndex = headers.findIndex(h =>
-        h.includes("攻撃")
-      );
-
-      const defenseIndex = headers.findIndex(h =>
-        h.includes("防御")
-      );
-
-      const speedIndex = headers.findIndex(h =>
-        h.includes("素早")
-      );
-
-      const hpIndex = headers.findIndex(h =>
-        h.includes("生命") || h.includes("HP")
-      );
-
-      const typeIndex = headers.findIndex(h =>
-        h.includes("属性")
-      );
-
-      const introIndex = headers.findIndex(h =>
-        h.includes("紹介")
-      );
+      const noIndex = getIndex("図鑑No");
+      const nameIndex = getIndex("キャラ名");
+      const typeIndex = getIndex("属性");
+      const rarityIndex = getIndex("レアリティ");
+      const attackIndex = getIndex("攻撃力");
+      const defenseIndex = getIndex("防御力");
+      const speedIndex = getIndex("素早さ");
+      const hpIndex = getIndex("生命力");
+      const totalIndex = getIndex("総合値");
+      const idIndex = getIndex("カードID");
+      const introIndex = getIndex("紹介");
 
       const target = rows.slice(1).find(row =>
         row[idIndex] &&
-        row[idIndex].trim() === kz
+        row[idIndex].trim().toUpperCase() === kz?.trim().toUpperCase()
       );
 
       if (!kz || !target) {
@@ -141,58 +194,82 @@
       }
 
       document.getElementById("card").innerHTML = `
-        <img src="${kz}.png" alt="${kz}">
 
-        <h1>KAZUPON CARD</h1>
+        <img
+          src="${kz}.png"
+          alt="${target[nameIndex] || kz}"
+        >
 
         <div class="name">
-          ${target[nameIndex] || ""}
+          ${target[nameIndex] || "名称未登録"}
         </div>
 
-        <div class="kz">
-          カードID：${kz}
+        <div class="id">
+          ${kz}
         </div>
 
         <div class="status">
 
-          <div>
-            <strong>属性</strong><br>
-            ${target[typeIndex] || "-"}
+          <div class="status-box">
+            <strong>図鑑No</strong>
+            <span>${target[noIndex] || "-"}</span>
           </div>
 
-          <div>
-            <strong>攻撃力</strong><br>
-            ${target[attackIndex] || "-"}
+          <div class="status-box">
+            <strong>レアリティ</strong>
+            <span>${target[rarityIndex] || "-"}</span>
           </div>
 
-          <div>
-            <strong>防御力</strong><br>
-            ${target[defenseIndex] || "-"}
+          <div class="status-box">
+            <strong>属性</strong>
+            <span>${target[typeIndex] || "-"}</span>
           </div>
 
-          <div>
-            <strong>素早さ</strong><br>
-            ${target[speedIndex] || "-"}
+          <div class="status-box">
+            <strong>攻撃力</strong>
+            <span>${target[attackIndex] || "-"}</span>
           </div>
 
-          <div>
-            <strong>生命力</strong><br>
-            ${target[hpIndex] || "-"}
+          <div class="status-box">
+            <strong>防御力</strong>
+            <span>${target[defenseIndex] || "-"}</span>
+          </div>
+
+          <div class="status-box">
+            <strong>素早さ</strong>
+            <span>${target[speedIndex] || "-"}</span>
+          </div>
+
+          <div class="status-box">
+            <strong>生命力</strong>
+            <span>${target[hpIndex] || "-"}</span>
+          </div>
+
+          <div class="status-box">
+            <strong>総合値</strong>
+            <span>${target[totalIndex] || "-"}</span>
           </div>
 
         </div>
 
         <div class="intro">
-          <strong>紹介</strong><br>
+          <div class="intro-title">紹介</div>
           ${target[introIndex] || "紹介文はまだ登録されていません。"}
         </div>
+
       `;
+
     })
 
-    .catch(() => {
+    .catch(error => {
+
       document.getElementById("card").innerHTML =
-        '<div class="error">データの読み込みに失敗しました。</div>';
+        '<div class="error">カードデータの読み込みに失敗しました。</div>';
+
+      console.error(error);
+
     });
+
 </script>
 
 </body>
