@@ -1,0 +1,42 @@
+name: 技データ自動更新
+
+on:
+  push:
+    paths:
+      - "カード図鑑.xlsx"
+      - "scripts/update_moves.py"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: リポジトリ取得
+        uses: actions/checkout@v4
+
+      - name: Python準備
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 必要ライブラリ
+        run: pip install openpyxl qrcode[pil]
+
+      - name: moves.csvと新規QRを自動生成
+        run: python scripts/update_moves.py
+
+      - name: 変更をGitHubへ保存
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add moves.csv 技QRコード
+          if git diff --cached --quiet; then
+            echo "変更なし"
+          else
+            git commit -m "技データと新規QRを自動更新"
+            git push
+          fi
