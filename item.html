@@ -6,12 +6,13 @@
 <title>かずぽんバトルカード｜持ち物</title>
 <style>
 body{margin:0;background:#111827;color:#fff;font-family:Arial,"Noto Sans JP",sans-serif}
-.wrap{max-width:760px;margin:auto;padding:24px 16px}
+.wrap{max-width:760px;margin:auto;padding:24px 16px 50px}
 .brand{text-align:center;font-weight:900;margin-bottom:16px}
 .card{background:#161b22;border:1px solid #30363d;border-radius:18px;overflow:hidden}
 .head{padding:22px;border-bottom:1px solid #30363d}
 .id{color:#f2c94c;font-weight:800;font-size:13px}
 h1{margin:6px 0;font-size:30px}
+.sub{color:#8b949e;font-size:14px}
 .grid{display:grid;grid-template-columns:1fr 1fr}
 .item{padding:16px 18px;border-bottom:1px solid #30363d}
 .item:nth-child(odd){border-right:1px solid #30363d}
@@ -30,45 +31,42 @@ h1{margin:6px 0;font-size:30px}
 <script>
 const app=document.getElementById("app");
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
-function csv(text){
+function parseCSV(t){
  const rows=[];let row=[],cell="",q=false;
- for(let i=0;i<text.length;i++){
-  const c=text[i],n=text[i+1];
-  if(c=='"'){if(q&&n=='"'){cell+='"';i++}else q=!q}
-  else if(c==','&&!q){row.push(cell);cell=""}
-  else if((c=='\n'||c=='\r')&&!q){if(c=='\r'&&n=='\n')i++;row.push(cell);cell="";if(row.some(x=>x!==""))rows.push(row);row=[]}
+ for(let i=0;i<t.length;i++){
+  const c=t[i],n=t[i+1];
+  if(c=='"'){if(q&&n=='"'){cell+='"';i++;}else q=!q;}
+  else if(c==','&&!q){row.push(cell);cell="";}
+  else if((c=='\n'||c=='\r')&&!q){if(c=='\r'&&n=='\n')i++;row.push(cell);cell="";if(row.some(x=>x!==""))rows.push(row);row=[];}
   else cell+=c;
  }
- if(cell!==""||row.length){row.push(cell);rows.push(row)}
+ if(cell!==""||row.length){row.push(cell);rows.push(row);}
  return rows;
 }
 (async()=>{
  try{
-  const id=new URLSearchParams(location.search).get("id");
-  if(!id){app.innerHTML='<div class="msg">持ち物IDがありません。</div>';return}
+  const id=(new URLSearchParams(location.search).get("id")||"").trim();
+  if(!id){app.innerHTML='<div class="msg">持ち物IDがありません。</div>';return;}
   const res=await fetch("items.csv?v="+Date.now(),{cache:"no-store"});
-  if(!res.ok)throw Error();
-  const data=csv((await res.text()).replace(/^\uFEFF/,""));
+  if(!res.ok)throw new Error();
+  const data=parseCSV((await res.text()).replace(/^\uFEFF/,""));
   const h=data[0].map(x=>x.trim());
   const rows=data.slice(1).map(r=>Object.fromEntries(h.map((k,i)=>[k,(r[i]??"").trim()])));
-  const m=rows.find(x=>x["持ち物ID"]===id.trim());
-  if(!m){app.innerHTML=`<div class="msg">${esc(id)} の持ち物データが見つかりません。</div>`;return}
-  const fields=[
-   ["対象","対象"],["発動条件","発動条件"],["消滅条件","消滅条件"],
-   ["効果","効果"]
-  ];
+  const m=rows.find(x=>x["持ち物ID"]===id);
+  if(!m){app.innerHTML=`<div class="msg">${esc(id)} の持ち物データが見つかりません。</div>`;return;}
   app.innerHTML=`
    <div class="head">
     <div class="id">${esc(m["持ち物ID"])}</div>
     <h1>${esc(m["名前"])}</h1>
-    <div>図鑑No. ${esc(m["図鑑No."])}</div>
+    <div class="sub">図鑑No. ${esc(m["図鑑No."])}</div>
    </div>
    <div class="grid">
-    ${fields.map(([k,label])=>`<div class="item ${k==="効果"?"full":""}">
-      <div class="label">${label}</div><div class="value">${esc(m[k]||"―")}</div>
-    </div>`).join("")}
+    <div class="item"><div class="label">対象</div><div class="value">${esc(m["対象"]||"―")}</div></div>
+    <div class="item"><div class="label">発動条件</div><div class="value">${esc(m["発動条件"]||"―")}</div></div>
+    <div class="item"><div class="label">消滅条件</div><div class="value">${esc(m["消滅条件"]||"―")}</div></div>
+    <div class="item full"><div class="label">効果</div><div class="value">${esc(m["効果"]||"―")}</div></div>
    </div>`;
- }catch(e){app.innerHTML='<div class="msg">持ち物データの読み込みに失敗しました。</div>'}
+ }catch(e){app.innerHTML='<div class="msg">持ち物データの読み込みに失敗しました。</div>';}
 })();
 </script>
 </body>
