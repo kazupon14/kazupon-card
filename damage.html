@@ -46,8 +46,8 @@ input,select{width:100%;height:45px;border-radius:10px;border:2px solid var(--li
 <div class="row"><div class="label">技の威力</div><input id="pow" type="number" value="15"></div>
 <div class="sec">技威力補正（5刻み）</div><div class="step"><button data-k="powMod" data-d="-5">−</button><div id="powMod">±0</div><button data-k="powMod" data-d="5">＋</button></div></div>
 
-<div class="card"><div class="sectionTitle opponentTitle">相手 <span id="relationBadge" class="relation normal">通常</span></div><div class="attrTitle">相手の属性（最大2つ選択）</div><div class="grid" id="enemy"></div>
-<div class="note">1つ目は金枠、2つ目は青枠。1属性だけでもOK。複合属性は相性倍率を自動で重ねます。</div>
+<div class="card"><div class="sectionTitle opponentTitle">相手 <span id="relationBadge" class="relation normal">通常</span></div><div class="attrTitle">相手の属性（1つ選択）</div><div class="grid" id="enemy"></div>
+<div class="note">相手の属性を1つ選択してください。</div>
 <div class="status"><label>相手の状態異常</label><select id="enemyStatus"></select></div>
 <div class="row"><div class="label">防御力</div><input id="def" type="number" value="20"></div>
 <div class="sec">防御力補正（5刻み）</div><div class="step"><button data-k="defMod" data-d="-5">−</button><div id="defMod">±0</div><button data-k="defMod" data-d="5">＋</button></div>
@@ -73,18 +73,21 @@ function buttons(){
  $("enemy").innerHTML=names.map((x,i)=>`<button class="ab" data-i="${i}"><img src="${icons[i]}">${x}</button>`).join("");
  document.querySelectorAll("#mine .ab").forEach(b=>b.onclick=()=>{my=+b.dataset.i;draw()});
  document.querySelectorAll("#enemy .ab").forEach(b=>b.onclick=()=>{
-  let i=+b.dataset.i;
-  if(en.includes(i)){ if(en.length===2) en=en.filter(x=>x!==i); }
-  else if(en.length===1) en.push(i); else en=[en[0],i];
+  en=[+b.dataset.i];
   draw();
- });
+});
 }
 function f(v){return v===0?"±0":v>0?"+"+v:""+v}
 function draw(){
  document.querySelectorAll("#mine .ab").forEach(b=>b.classList.toggle("on1",+b.dataset.i===my));
- document.querySelectorAll("#enemy .ab").forEach(b=>{b.classList.remove("on1","on2");if(en[0]===+b.dataset.i)b.classList.add("on1");if(en[1]===+b.dataset.i)b.classList.add("on2")});
+ document.querySelectorAll("#enemy .ab").forEach(b=>{
+  b.classList.toggle("on1",en[0]===+b.dataset.i);
+  b.classList.remove("on2");
+});
  ["atkMod","powMod","defMod"].forEach(k=>$(k).textContent=f(s[k]));
- let m=1,p=[];en.forEach(e=>{let v=T[my][e];m*=v;let z=v===2?"◎":v===1.25?"○":v===.75?"△":v===0?"×":"－";p.push(`${names[my]}→${names[e]} ${z}${v===1?"":"×"+v}`)});
+ let e=en[0],v=T[my][e],m=v,p=[];
+ let z=v===2?"◎":v===1.25?"○":v===.75?"△":v===0?"×":"－";
+ p.push(`${names[my]}→${names[e]} ${z}${v===1?"":"×"+v}`);
  let relation="通常",relationClass="normal";
  if(m===0){relation="無効";relationClass="null";}
  else if(m>1){relation="有利";relationClass="adv";}
