@@ -127,11 +127,12 @@ main{padding:15px 12px 40px}
   </div>
 
   <div class="controls">
-    <input id="search" inputmode="numeric" placeholder="番号検索（例：128）">
+    <input id="search" inputmode="numeric" placeholder="複数番号OK（例：18 31 41 / 18,31,41）">
     <button class="filter" data-range="all">すべて</button>
     <button class="filter" data-range="1">1桁</button>
     <button class="filter" data-range="2">2桁</button>
     <button class="filter" data-range="3">3桁</button>
+    <button class="filter" id="selectInput">入力した番号を全部選択</button>
     <button class="filter" id="clear">選択解除</button>
   </div>
 
@@ -177,13 +178,23 @@ function updateStatus(){
   status.textContent=`${selected.size}個選択中`;
 }
 
+function parseNumbers(){
+  const raw=search.value.trim();
+  if(!raw) return [];
+  return [...new Set(
+    raw.split(/[\s,、・\/]+/)
+       .map(v=>parseInt(v,10))
+       .filter(n=>Number.isInteger(n) && n>=1 && n<=160)
+  )];
+}
+
 function applyFilter(){
-  const q=search.value.trim();
+  const nums=parseNumbers();
   document.querySelectorAll('.card').forEach(card=>{
-    const ok=
-      (!q || card.dataset.num.includes(q)) &&
-      (activeRange==='all' || card.dataset.digits===activeRange);
-    card.classList.toggle('hidden',!ok);
+    const n=Number(card.dataset.num);
+    const numberOK = nums.length===0 || nums.includes(n);
+    const rangeOK = activeRange==='all' || card.dataset.digits===activeRange;
+    card.classList.toggle('hidden',!(numberOK && rangeOK));
   });
 }
 
@@ -195,6 +206,19 @@ document.querySelectorAll('[data-range]').forEach(btn=>{
     applyFilter();
   };
 });
+
+document.getElementById('selectInput').onclick=()=>{
+  const nums=parseNumbers();
+  if(!nums.length){
+    alert('1〜160の番号を入力してください。例：18 31 41');
+    return;
+  }
+  nums.forEach(n=>selected.add(n));
+  document.querySelectorAll('.card').forEach(c=>{
+    c.classList.toggle('selected',selected.has(Number(c.dataset.num)));
+  });
+  updateStatus();
+};
 
 document.getElementById('clear').onclick=()=>{
   selected.clear();
