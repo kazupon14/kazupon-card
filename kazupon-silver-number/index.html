@@ -1,1 +1,326 @@
-a
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>かずぽん シルバー番号シール ダウンロード</title>
+
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;background:#090909;color:#fff;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Yu Gothic",sans-serif
+}
+header{
+  position:sticky;top:0;z-index:20;
+  background:rgba(9,9,9,.97);
+  border-bottom:1px solid #5f4810;
+  padding:14px
+}
+.wrap,.grid{max-width:1100px;margin:auto}
+h1{margin:0 0 6px;color:#f2c84b;font-size:clamp(22px,5vw,34px)}
+.intro{margin:0 0 10px;color:#ddd;line-height:1.6}
+
+.guide{
+  background:#141414;
+  border:1px solid #6b5318;
+  border-radius:12px;
+  padding:12px;
+  margin:10px 0 12px;
+  line-height:1.7;
+  font-size:14px
+}
+.guide strong{color:#f2c84b}
+.guide .size{color:#fff;font-weight:800}
+
+.actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-bottom:10px
+}
+.action{
+  border:0;border-radius:10px;padding:13px 8px;
+  font-weight:900;font-size:14px;text-align:center;
+  text-decoration:none;cursor:pointer
+}
+.gold{background:linear-gradient(#f2d16c,#9a7416);color:#080808}
+.dark{background:#202020;color:#f2d16c;border:1px solid #695219}
+
+.controls{display:flex;gap:7px;flex-wrap:wrap}
+input{
+  flex:1 1 170px;padding:10px;border-radius:9px;
+  border:1px solid #65501b;background:#151515;color:white;font-size:16px
+}
+.filter{
+  padding:9px 11px;border-radius:9px;border:1px solid #65501b;
+  background:#171717;color:#f4d56a;font-weight:700
+}
+.status{margin-top:9px;color:#f2d16c;font-weight:800}
+main{padding:15px 12px 40px}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(105px,1fr));
+  gap:10px
+}
+.card{
+  position:relative;background:#111;border:2px solid #292929;
+  border-radius:13px;padding:8px;text-align:center;
+  cursor:pointer;user-select:none
+}
+.card.selected{
+  border-color:#f2c84b;
+  box-shadow:0 0 0 2px rgba(242,200,75,.2)
+}
+.check{
+  position:absolute;right:7px;top:7px;width:25px;height:25px;
+  border-radius:50%;background:#222;border:2px solid #80661d;
+  display:grid;place-items:center;font-weight:900
+}
+.selected .check{background:#e1b63b;color:#090909}
+.card img{
+  width:100%;height:80px;object-fit:contain;
+  display:block;margin:4px auto 5px
+}
+.num{font-weight:800;color:#f1d16a}
+.single{
+  display:block;margin-top:6px;padding:7px 4px;border-radius:8px;
+  background:#6f5515;color:#fff;text-decoration:none;
+  font-size:12px;font-weight:800
+}
+.hidden{display:none!important}
+.small-note{
+  max-width:1100px;margin:18px auto 0;color:#aaa;
+  font-size:12px;line-height:1.7
+}
+@media(max-width:500px){
+  .actions{grid-template-columns:1fr}
+  .grid{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+
+<body>
+<header>
+<div class="wrap">
+  <h1>かずぽん シルバー番号シール</h1>
+  <p class="intro">欲しい番号をタップして複数選択できます。</p>
+
+  <div class="guide">
+    <strong>印刷方法</strong><br>
+    ① 欲しい番号をタップして選択<br>
+    ② <strong>「選んだ番号をA4 PDFでダウンロード」</strong>を押す<br>
+    ③ PDFを開き、印刷設定を<strong>「実際のサイズ」または「100%」</strong>にして印刷してください。<br>
+    ※「用紙に合わせる」「拡大・縮小」は使用しないでください。<br><br>
+
+    <strong>仕上がりサイズ</strong><br>
+    <span class="size">1桁：6mm × 9mm</span><br>
+    <span class="size">2桁：9mm × 9mm</span><br>
+    <span class="size">3桁：12mm × 9mm</span>
+  </div>
+
+  <div class="actions">
+    <button id="pdfDownload" class="action gold">選んだ番号をA4 PDFでダウンロード</button>
+    <a class="action dark" href="kazupon-silver-number-5-160.zip" download>5〜160 全部PNGでダウンロード</a>
+  </div>
+
+  <div class="controls">
+    <input id="search" inputmode="numeric" placeholder="複数番号OK（例：18 31 41 / 18,31,41）">
+    <button class="filter" data-range="all">すべて</button>
+    <button class="filter" data-range="1">1桁</button>
+    <button class="filter" data-range="2">2桁</button>
+    <button class="filter" data-range="3">3桁</button>
+    <button class="filter" id="selectInput">入力した番号を全部選択</button>
+    <button class="filter" id="clear">選択解除</button>
+  </div>
+
+  <div class="status" id="status">0個選択中</div>
+</div>
+</header>
+
+<main>
+  <div class="grid" id="grid"></div>
+  <div class="small-note">
+    ※個別保存はPNG形式です。実寸で印刷したい場合は、上のA4 PDFをご利用ください。
+  </div>
+</main>
+
+<script>
+const grid=document.getElementById('grid');
+const search=document.getElementById('search');
+const status=document.getElementById('status');
+const selected=new Set();
+let activeRange='all';
+
+for (let n = 5; n <= 160;n++){
+  const card=document.createElement('div');
+  card.className='card';
+  card.dataset.num=n;
+  card.dataset.digits=String(n).length;
+  card.innerHTML=`
+    <span class="check">✓</span>
+    <img src="${n}.png" alt="${n}">
+    <div class="num">No. ${n}</div>
+    <a class="single" href="${n}.png" download="kazupon-number-${n}.png">この番号だけ保存</a>
+  `;
+  card.addEventListener('click',e=>{
+    if(e.target.closest('.single')) return;
+    selected.has(n)?selected.delete(n):selected.add(n);
+    card.classList.toggle('selected',selected.has(n));
+    updateStatus();
+  });
+  grid.appendChild(card);
+}
+
+function updateStatus(){
+  status.textContent=`${selected.size}個選択中`;
+}
+
+function parseNumbers(){
+  const raw=search.value.trim();
+  if(!raw) return [];
+  return [...new Set(
+    raw.split(/[\s,、・\/]+/)
+       .map(v=>parseInt(v,10))
+       .filter(n=>Number.isInteger(n) && n>=1 && n<=160)
+  )];
+}
+
+function applyFilter(){
+  const nums=parseNumbers();
+  document.querySelectorAll('.card').forEach(card=>{
+    const n=Number(card.dataset.num);
+    const numberOK = nums.length===0 || nums.includes(n);
+    const rangeOK = activeRange==='all' || card.dataset.digits===activeRange;
+    card.classList.toggle('hidden',!(numberOK && rangeOK));
+  });
+}
+
+search.addEventListener('input',applyFilter);
+
+document.querySelectorAll('[data-range]').forEach(btn=>{
+  btn.onclick=()=>{
+    activeRange=btn.dataset.range;
+    applyFilter();
+  };
+});
+
+document.getElementById('selectInput').onclick=()=>{
+  const nums=parseNumbers();
+  if(!nums.length){
+    alert('5〜160の番号を入力してください。例：18 31 41');
+    return;
+  }
+  nums.forEach(n=>selected.add(n));
+  document.querySelectorAll('.card').forEach(c=>{
+    c.classList.toggle('selected',selected.has(Number(c.dataset.num)));
+  });
+  updateStatus();
+};
+
+document.getElementById('clear').onclick=()=>{
+  selected.clear();
+  document.querySelectorAll('.card').forEach(c=>c.classList.remove('selected'));
+  updateStatus();
+};
+
+function getPrintSize(n){
+  const digits=String(n).length;
+  if(digits===1) return {w:6,h:9};
+  if(digits===2) return {w:9,h:9};
+  return {w:12,h:9};
+}
+
+function loadImageData(url){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const c=document.createElement('canvas');
+      c.width=img.naturalWidth;
+      c.height=img.naturalHeight;
+      const ctx=c.getContext('2d');
+      ctx.drawImage(img,0,0);
+      resolve(c.toDataURL('image/png'));
+    };
+    img.onerror=reject;
+    img.src=url;
+  });
+}
+
+document.getElementById('pdfDownload').onclick=async()=>{
+  if(!selected.size){
+    alert('先に番号を選んでください。');
+    return;
+  }
+
+  if(!window.jspdf){
+    alert('PDF機能の読み込みに失敗しました。通信環境を確認してもう一度お試しください。');
+    return;
+  }
+
+  const button=document.getElementById('pdfDownload');
+  const original=button.textContent;
+  button.textContent='PDF作成中…';
+  button.disabled=true;
+
+  try{
+    const {jsPDF}=window.jspdf;
+    const pdf=new jsPDF({
+      orientation:'portrait',
+      unit:'mm',
+      format:'a4',
+      compress:true
+    });
+
+    const nums=[...selected].sort((a,b)=>a-b);
+
+    const pageW=210;
+    const pageH=297;
+    const marginX=10;
+    const marginY=10;
+    const gapX=3;
+    const gapY=3;
+
+    let x=marginX;
+    let y=marginY;
+    let rowH=0;
+    let first=true;
+
+    for(const n of nums){
+      const {w,h}=getPrintSize(n);
+
+      if(x+w>pageW-marginX){
+        x=marginX;
+        y+=rowH+gapY;
+        rowH=0;
+      }
+
+      if(y+h>pageH-marginY){
+        pdf.addPage();
+        x=marginX;
+        y=marginY;
+        rowH=0;
+      }
+
+      const data=await loadImageData(`${n}.png`);
+      pdf.addImage(data,'PNG',x,y,w,h,undefined,'FAST');
+
+      x+=w+gapX;
+      rowH=Math.max(rowH,h);
+      first=false;
+    }
+
+    pdf.save('kazupon-selected-numbers-A4.pdf');
+  }catch(err){
+    console.error(err);
+    alert('PDF作成中にエラーが発生しました。もう一度お試しください。');
+  }finally{
+    button.textContent=original;
+    button.disabled=false;
+  }
+};
+</script>
+</body>
+</html>
