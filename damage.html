@@ -30,11 +30,18 @@ input,select{width:100%;height:45px;border-radius:10px;border:2px solid var(--li
 .relation.normal{background:#24262e;border-color:#555}
 .relation.null{background:#111;border-color:#777;color:#bbb}
 
+
+.lookupMsg{min-height:18px;margin:-4px 0 8px;color:#aaaeba;font-size:11px}
+.lookupMsg.ok{color:#9fe6aa}.lookupMsg.ng{color:#ff9a96}
+
 </style></head><body><div class="wrap">
 <div class="title">KAZUPON CARD</div><div class="sub">ダメージ計算機 Ver.5</div>
 
 <div class="card"><div class="sectionTitle">自分</div><div class="attrTitle">自分の属性（1つ選択）</div><div class="grid" id="mine"></div>
 <div class="status"><label>自分の状態異常</label><select id="myStatus"></select></div>
+<div class="row"><div class="label">図鑑No.<span class="hint">入力すると攻撃力を自動反映</span></div>
+<input id="myDexNo" type="number" inputmode="numeric" placeholder="例：25"></div>
+<div class="lookupMsg" id="myLookup"></div>
 <div class="row"><div class="label">攻撃力<span class="hint">キャラクターの基本攻撃力</span></div><input id="atk" type="number" value="15"></div>
 <div class="sec">攻撃力補正（5刻み）</div><div class="step"><button data-k="atkMod" data-d="-5">−</button><div id="atkMod">±0</div><button data-k="atkMod" data-d="5">＋</button></div>
 <div class="sec">攻撃力％補正</div>
@@ -49,6 +56,9 @@ input,select{width:100%;height:45px;border-radius:10px;border:2px solid var(--li
 <div class="card"><div class="sectionTitle opponentTitle">相手 <span id="relationBadge" class="relation normal">通常</span></div><div class="attrTitle">相手の属性（1つ選択）</div><div class="grid" id="enemy"></div>
 <div class="note">相手の属性を1つ選択してください。</div>
 <div class="status"><label>相手の状態異常</label><select id="enemyStatus"></select></div>
+<div class="row"><div class="label">図鑑No.<span class="hint">入力すると防御力を自動反映</span></div>
+<input id="enemyDexNo" type="number" inputmode="numeric" placeholder="例：25"></div>
+<div class="lookupMsg" id="enemyLookup"></div>
 <div class="row"><div class="label">防御力</div><input id="def" type="number" value="20"></div>
 <div class="sec">防御力補正（5刻み）</div><div class="step"><button data-k="defMod" data-d="-5">−</button><div id="defMod">±0</div><button data-k="defMod" data-d="5">＋</button></div>
 <div class="sec">防御力％補正</div>
@@ -119,5 +129,96 @@ document.querySelectorAll(".pctbtn").forEach(b=>b.onclick=()=>{
 ["atk","pow","def","hp","atkPct","defPct","myStatus","enemyStatus"].forEach(x=>{$(x).addEventListener("input",draw);$(x).addEventListener("change",draw)});
 $("reset").onclick=()=>{my=0;en=[0];s={atkMod:0,powMod:0,defMod:0};$("atk").value=15;$("pow").value=15;$("def").value=20;$("hp").value=100;$("atkPct").value=0;$("defPct").value=0;$("myStatus").value="なし";$("enemyStatus").value="なし";draw()};
 $("myStatus").innerHTML=myStatuses.map(x=>`<option>${x}</option>`).join(""); $("enemyStatus").innerHTML=enemyStatuses.map(x=>`<option>${x}</option>`).join("");
+
+let cardRows=[];
+
+function parseCSV(text){
+ const rows=[];let row=[],cell="",q=false;
+ for(let i=0;i<text.length;i++){
+  const c=text[i],nxt=text[i+1];
+  if(c==='"'){
+   if(q && nxt==='"'){cell+='"';i++;}
+   else q=!q;
+  }else if(c===',' && !q){row.push(cell);cell="";}
+  else if((c==='\n'||c==='\r') && !q){
+   if(c==='\r' && nxt==='\n') i++;
+   row.push(cell);cell="";
+   if(row.some(v=>v!=="")) rows.push(row);
+   row=[];
+  }else cell+=c;
+ }
+ if(cell!==""||row.length){row.push(cell);rows.push(row);}
+ return rows;
+}
+
+async function loadCards(){
+ try{
+  const r=await fetch("cards.csv?v="+Date.now(),{cache:"no-store"});
+  if(!r.ok) throw new Error("cards.csv");
+  const rows=parseCSV((await r.text()).replace(/^\uFEFF/,""));
+  const h=rows[0].map(x=>String(x).trim());
+  cardRows=rows.slice(1).map(r=>Object.fromEntries(h.map((k,i)=>[k,String(r[i]??"").trim()])));
+ }catch(e){
+  cardRows=[];
+ }
+}
+
+function getField(obj,names){
+ for(const k of names) if(obj[k]!==undefined) return obj[k];
+ return "";
+}
+
+function normalizeNo(v){
+ const n=parseInt(String(v).replace(/[^\d]/g,""),10);
+ return Number.isFinite(n)?n:null;
+}
+
+function findCard(no){
+ const target=normalizeNo(no);
+ if(target===null) return null;
+ return cardRows.find(c=>{
+  const v=getField(c,["図鑑No","図鑑No.","図鑑NO","図鑑番号"]);
+  return normalizeNo(v)===target;
+ })||null;
+}
+
+function applyMyDex(){
+ const msg=$("myLookup");
+ const raw=$("myDexNo").value;
+ if(!raw){msg.textContent="";msg.className="lookupMsg";return;}
+ const c=findCard(raw);
+ if(!c){msg.textContent="該当する図鑑No.がありません";msg.className="lookupMsg ng";return;}
+ const atk=Number(getField(c,["攻撃力","攻撃"]));
+ const name=getField(c,["キャラ名","名前","キャラクター名"]);
+ if(Number.isFinite(atk)){
+  $("atk").value=atk;
+  msg.textContent=(name?name+"　":"")+"攻撃力 "+atk+" を反映";
+  msg.className="lookupMsg ok";
+  draw();
+ }
+}
+
+function applyEnemyDex(){
+ const msg=$("enemyLookup");
+ const raw=$("enemyDexNo").value;
+ if(!raw){msg.textContent="";msg.className="lookupMsg";return;}
+ const c=findCard(raw);
+ if(!c){msg.textContent="該当する図鑑No.がありません";msg.className="lookupMsg ng";return;}
+ const def=Number(getField(c,["防御力","防御"]));
+ const name=getField(c,["キャラ名","名前","キャラクター名"]);
+ if(Number.isFinite(def)){
+  $("def").value=def;
+  msg.textContent=(name?name+"　":"")+"防御力 "+def+" を反映";
+  msg.className="lookupMsg ok";
+  draw();
+ }
+}
+
 buttons();draw();
+
+$("myDexNo").addEventListener("change",applyMyDex);
+$("myDexNo").addEventListener("blur",applyMyDex);
+$("enemyDexNo").addEventListener("change",applyEnemyDex);
+$("enemyDexNo").addEventListener("blur",applyEnemyDex);
+loadCards();
 </script></body></html>
